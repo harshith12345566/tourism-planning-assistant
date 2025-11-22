@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tourism Planning Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 Tourism Planning Assistant</h1>
+            <p class="subtitle">Plan your trip with AI-powered recommendations</p>
+        </header>
+
+        <div class="chat-container">
+            <div class="input-section">
+                <label for="placeInput" class="input-label">Input:</label>
+
+                <!-- Search History -->
+                <div id="searchHistory" class="search-history"></div>
+
+                <!-- Popular Destinations -->
+                <div class="popular-section">
+                    <div class="popular-label">✨ Popular Destinations</div>
+                    <div id="popularDestinations"></div>
+                </div>
+
+                <input type="text" id="placeInput" placeholder="I'm going to go to Bangalore let's plan my trip."
+                    autocomplete="off">
+
+                <button id="searchBtn" onclick="searchPlace()">
+                    <span id="btnText">Send</span>
+                    <span id="btnLoader" class="loader" style="display: none;"></span>
+                </button>
+            </div>
+
+            <div id="outputSection" class="output-section" style="display: none;">
+                <!-- Action Buttons - Larger and More Prominent -->
+                <div class="action-buttons">
+                    <button onclick="saveTrip()" class="action-btn" title="Save This Trip">
+                        💾 Save Trip
+                    </button>
+                    <button onclick="shareResults()" class="action-btn" title="Share Results">
+                        📤 Share
+                    </button>
+                    <button onclick="copyResults()" class="action-btn" title="Copy to Clipboard">
+                        📋 Copy
+                    </button>
+                    <button onclick="printResults()" class="action-btn" title="Print">
+                        🖨️ Print
+                    </button>
+                </div>
+
+                <div class="output-label">Output:</div>
+                <div id="outputContent" class="output-content"></div>
+            </div>
+
+            <!-- Saved Trips Section -->
+            <div id="savedTripsSection" class="saved-trips-section" style="display: none;">
+                <div class="saved-trips-title">💾 Saved Trips</div>
+                <div id="savedTripsList"></div>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
