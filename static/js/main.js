@@ -228,55 +228,99 @@ function addToHistory(place) {
  * Extract place name from natural language input
  */
 function extractPlaceName(input) {
-    const lowerInput = input.toLowerCase().trim();
+    // normalize input
+    let cleanedInput = input.trim();
 
-    // Keywords to remove from place name
-    const weatherKeywords = ['temperature', 'weather', 'rain', 'climate', 'hot', 'cold', 'sunny'];
-    const placeKeywords = ['place', 'places', 'visit', 'attraction', 'attractions', 'my'];
-    const questionWords = ['what', 'is', 'the', 'are', 'can', 'i', 'there', 'with', 'to', 'each'];
-    const actionKeywords = ['plan', 'trip', 'go to', 'going to', 'timings', 'timing', 'time'];
+    // Common stop words and action phrases to remove
+    const stopPhrases = [
+        // Actions/Intents
+        'plan a trip to', 'plan my trip to', 'plan trip to', 'plan a trip', 'plan my trip', 'plan trip',
+        'i want to go to', 'i want to visit', 'i would like to visit', 'going to', 'go to',
+        'show me places in', 'show places in', 'places in', 'places near', 'places at',
+        'attractions in', 'attractions at', 'tourist spots in', 'tourist spots at',
+        'best time to visit', 'best time for', 'timings for', 'timings of',
+        'weather in', 'weather at', 'climate of', 'climate in', 'temperature in', 'temperature at',
+        'guide for', 'guide to', 'itinerary for', 'itinerary to',
+        'tell me about', 'information about', 'info about',
+        'search for', 'find places in', 'find places',
 
-    // First try pattern matching for complex sentences
-    const patterns = [
-        // "hampi plan my trip" or "paris plan trip"
-        /^(\w+(?:\s+\w+)?)\s+plan\s+(?:my\s+)?trip/i,
-        // "going to go to Paris"
-        /going to (?:go to )?(.+?)(?:\?|,|\.|let's|what|\s+temperature|\s+weather|\s+place|\s+visit|$)/i,
-        // "visit Paris"
-        /visit (.+?)(?:\?|,|\.|let's|what|\s+temperature|\s+weather|$)/i,
-        // "trip to Paris"
-        /trip to (.+?)(?:\?|,|\.|let's|what|\s+temperature|\s+weather|$)/i,
-        // "in Paris" or "at Paris"
-        /(?:in|at) (.+?)(?:\?|,|\.|let's|what|\s+temperature|\s+weather|\s+place|$)/i,
-        // "Paris top 10 places"
-        /^(\w+(?:\s+\w+)?)\s+top\s+\d+/i
+        // Common words (if they appear at start/end or as standalone)
+        'please', 'can you', 'could you', 'hey', 'hi', 'hello',
+        'what is', 'where is', 'how is',
+        'trip', 'tour', 'travel', 'vacation', 'holiday',
+        'places', 'place', 'spots', 'spot', 'locations', 'location',
+        'sightseeing', 'sights',
+        'weather', 'climate', 'temperature', 'forecast',
+        'near', 'nearby', 'around'
     ];
 
-    for (let pattern of patterns) {
+    // 1. Try specific patterns first (high confidence)
+    const patterns = [
+        // "Plan a trip to X"
+        /(?:plan|planning)\s+(?:a|my)?\s*trip\s+(?:to|for)\s+(.+?)(?:$|[?.])/i,
+        // "X plan a trip" or "X trip plan"
+        /^(.+?)\s+(?:plan|planning)\s+(?:a|my)?\s*trip/i,
+        // "Places to visit in X"
+        /places\s+(?:to\s+visit\s+)?(?:in|at|near)\s+(.+?)(?:$|[?.])/i,
+        // "Best places in X"
+        /best\s+places\s+(?:in|at|near)\s+(.+?)(?:$|[?.])/i,
+        // "Show me X" (if X is likely a place)
+        /show\s+me\s+(?:places\s+in\s+)?(.+?)(?:$|[?.])/i,
+        // "Go to X"
+        /go\s+to\s+(.+?)(?:$|[?.])/i,
+        // "Visit X"
+        /visit\s+(.+?)(?:$|[?.])/i,
+        // "X weather" or "X temperature"
+        /^(.+?)\s+(?:weather|temperature|climate|forecast)/i,
+        // "Weather in X"
+        /(?:weather|temperature|climate|forecast)\s+(?:in|at|of|for)\s+(.+?)(?:$|[?.])/i
+    ];
+
+    for (const pattern of patterns) {
         const match = input.match(pattern);
         if (match && match[1]) {
-            let placeName = match[1].trim();
-            // Clean up any remaining keywords
-            [...weatherKeywords, ...placeKeywords, ...actionKeywords].forEach(keyword => {
-                placeName = placeName.replace(new RegExp('\\b' + keyword + '\\b', 'gi'), '');
-            });
-            placeName = placeName.trim();
-            if (placeName && placeName.length > 1) return placeName;
+            let candidate = match[1].trim();
+            // Clean up candidate further if it contains common stop words at the end
+            // e.g. "Hampi for 2 days" -> "Hampi"
+            candidate = candidate.replace(/\s+(?:for|in|at|on)\s+\d+\s+(?:days|nights|weeks).*/i, '');
+
+            // If candidate is reasonable length, return it
+            if (candidate.length > 1) return candidate;
         }
     }
 
-    // For simple formats like "bellary temperature" or "paris weather"
-    let cleanedInput = input;
+    // 2. Fallback: Remove known phrases and clean up
+    // Sort phrases by length (descending) to remove longest matches first
+    stopPhrases.sort((a, b) => b.length - a.length);
 
-    // Remove all keywords
-    [...weatherKeywords, ...placeKeywords, ...questionWords, ...actionKeywords].forEach(keyword => {
-        cleanedInput = cleanedInput.replace(new RegExp('\\b' + keyword + '\\b', 'gi'), '');
-    });
+    let processed = cleanedInput.toLowerCase();
 
-    // Clean up extra spaces and punctuation
-    cleanedInput = cleanedInput.replace(/[?,.\\s]+/g, ' ').trim();
+    // Remove phrases
+    for (const phrase of stopPhrases) {
+        // Use word boundary for short words, but loose matching for phrases
+        if (phrase.includes(' ')) {
+            processed = processed.replace(phrase, ' ');
+        } else {
+            processed = processed.replace(new RegExp(`\\b${phrase}\\b`, 'g'), ' ');
+        }
+    }
 
-    return cleanedInput || input.trim();
+    // Remove special chars and extra spaces
+    processed = processed.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // If we have something left, return it (capitalized properly)
+    if (processed.length > 1) {
+        // Try to preserve original casing from input if possible, or just return what we have
+        // Since we lowercased everything, let's try to map back to original input words
+        const words = processed.split(' ');
+        const originalWords = input.split(/\s+/);
+
+        // Simple reconstruction attempt
+        return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    // 3. Last resort: Return original input trimmed
+    return input.trim();
 }
 
 /**

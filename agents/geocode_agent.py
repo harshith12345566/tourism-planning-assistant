@@ -38,11 +38,13 @@ class GeocodeAgent:
         if not place_name or not place_name.strip():
             return None
         
+        # Get multiple results to find the most relevant one
         params = {
             'q': place_name.strip(),
             'format': 'json',
-            'limit': 1,
-            'accept-language': 'en'
+            'limit': 5,  # Get top 5 results instead of just 1
+            'accept-language': 'en',
+            'addressdetails': 1  # Get detailed address info
         }
         
         try:
@@ -54,13 +56,26 @@ class GeocodeAgent:
             )
             
             if response and isinstance(response, list) and len(response) > 0:
-                result = response[0]
+                # Choose the most relevant result based on importance score
+                # Nominatim returns results sorted by relevance, but we'll also check importance
+                best_result = response[0]
+                best_importance = float(best_result.get('importance', 0))
+                
+                # Check if any other result has significantly higher importance
+                for result in response[1:]:
+                    importance = float(result.get('importance', 0))
+                    if importance > best_importance * 1.2:  # 20% higher importance threshold
+                        best_result = result
+                        best_importance = importance
+                
+                print(f"DEBUG: Geocoded '{place_name}' to {best_result.get('display_name')}")
+                
                 return {
-                    'lat': float(result.get('lat', 0)),
-                    'lon': float(result.get('lon', 0)),
-                    'display_name': result.get('display_name', place_name),
-                    'place_id': result.get('place_id'),
-                    'place_type': result.get('type', 'unknown')
+                    'lat': float(best_result.get('lat', 0)),
+                    'lon': float(best_result.get('lon', 0)),
+                    'display_name': best_result.get('display_name', place_name),
+                    'place_id': best_result.get('place_id'),
+                    'place_type': best_result.get('type', 'unknown')
                 }
             else:
                 return None
