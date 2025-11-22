@@ -64,19 +64,10 @@ class ParentAgent:
         longitude = geocode_result['lon']
         display_name = geocode_result['display_name']
         
-        # Extract clean city name (first meaningful part before comma)
-        # Remove technical names like "(Aero)plane Field" and get actual city name
-        clean_name = place_name.title()  # Use the user's input, properly capitalized
         
-        # Try to get a better name from display_name if available
-        if display_name:
-            parts = display_name.split(',')
-            # Skip parts with parentheses or "Field" and get the first meaningful city/town name
-            for part in parts:
-                part = part.strip()
-                if part and '(' not in part and 'Field' not in part and len(part) > 2:
-                    clean_name = part
-                    break
+        # Use the user's input as the city name (properly capitalized)
+        # This ensures we show what the user searched for, not technical geocoding names
+        clean_name = place_name.title()
         
         result['place_info'] = {
             'name': clean_name,
