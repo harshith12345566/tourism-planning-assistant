@@ -52,6 +52,29 @@ class ParentAgent:
             'travel_tips': None
         }
         
+        # Step 0: Check for natural language query
+        specific_questions = []
+        original_query = place_name
+        intent = 'combined' # Default intent
+        category = 'tourism' # Default category
+        
+        # If the input seems like a sentence or has multiple words, try to extract intent
+        if len(place_name.split()) > 3 or " and " in place_name or " what " in place_name:
+            intent_data = self.gemini_agent.extract_intent(place_name)
+            if intent_data and intent_data.get('place'):
+                place_name = intent_data['place']
+                intent = intent_data.get('intent', 'combined')
+                specific_questions = intent_data.get('specific_questions', [])
+                print(f"DEBUG: Extracted place '{place_name}', intent '{intent}' from query '{original_query}'")
+                
+                # Map intent to category
+                if intent == 'food':
+                    category = 'food'
+                elif intent == 'accommodation':
+                    category = 'accommodation'
+        
+        result['intent'] = intent
+        
         # Step 1: Geocode the place
         geocode_result = self.geocode_agent.geocode(place_name)
         
@@ -76,8 +99,8 @@ class ParentAgent:
             'lon': longitude
         }
         
-        # Fetch photo for the main place (skip for now, photos disabled)
-        result['place_info']['photo'] = None
+        # Fetch photo for the main place
+        result['place_info']['photo'] = self.photo_agent.get_place_photo(clean_name)
         
         # Step 3 & 4: Fetch weather and attractions in parallel for faster response
         from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -90,10 +113,11 @@ class ParentAgent:
                 latitude,
                 longitude,
                 radius=20000,
-                limit=attractions_limit
+                limit=attractions_limit,
+                category=category
             )
         
-        # Run weather and attractions fetch in parallel
+        # Always fetch both - we'll control what to show in format_output
         with ThreadPoolExecutor(max_workers=2) as executor:
             weather_future = executor.submit(fetch_weather)
             attractions_future = executor.submit(fetch_attractions)
@@ -102,9 +126,29 @@ class ParentAgent:
             attractions = attractions_future.result()
         
         result['weather'] = weather_data
-        result['attractions'] = attractions
         
-        # Skip photo fetching for attractions (photos disabled)
+        # Fetch photos for attractions in parallel
+        if attractions:
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # Create a dictionary to map future to attraction index
+                future_to_attr = {
+                    executor.submit(
+                        self.photo_agent.get_attraction_photo, 
+                        attr['name'], 
+                        clean_name
+                    ): i for i, attr in enumerate(attractions)
+                }
+                
+                for future in as_completed(future_to_attr):
+                    idx = future_to_attr[future]
+                    try:
+                        photo_url = future.result()
+                        attractions[idx]['photo'] = photo_url
+                    except Exception as e:
+                        print(f"Error fetching photo for attraction: {e}")
+                        attractions[idx]['photo'] = None
+                        
+        result['attractions'] = attractions
         
         # Only generate AI content if Gemini is enabled and working
         if self.gemini_agent.enabled:
@@ -114,7 +158,8 @@ class ParentAgent:
                     return self.gemini_agent.generate_destination_summary(
                         clean_name,
                         weather_data,
-                        attractions
+                        attractions,
+                        specific_questions
                     )
                 
                 def fetch_tips():
@@ -140,7 +185,7 @@ class ParentAgent:
     
     def format_output(self, result: Dict[str, Any]) -> str:
         """
-        Format the result into a readable output string.
+        Format the result into a readable output string based on intent.
         
         Args:
             result: The result dictionary from process_place
@@ -151,34 +196,41 @@ class ParentAgent:
         if not result['success']:
             return result.get('error_message', 'Unknown error occurred')
         
-        output_lines = []
-        
-        # Place information
-        place_info = result['place_info']
-        output_lines.append("=" * 60)
-        output_lines.append("TOURISM INFORMATION")
-        output_lines.append("=" * 60)
-        output_lines.append(f"\nPlace: {place_info['name']}")
-        output_lines.append(f"Coordinates: {place_info['lat']:.4f}, {place_info['lon']:.4f}")
-        
-        # Weather information
+        place_name = result['place_info']['name']
+        intent = result.get('intent', 'combined')
         weather = result['weather']
-        if weather:
-            output_lines.append(f"\nWeather:")
-            output_lines.append(f"   {self.weather_agent.format_weather_info(weather)}")
-        else:
-            output_lines.append("\nWeather: Information not available")
-        
-        # Tourist attractions
         attractions = result['attractions']
-        output_lines.append(f"\nTourist Attractions (Top {len(attractions)}):")
-        if attractions:
-            for i, attr in enumerate(attractions, 1):
-                output_lines.append(f"   {i}. {attr['name']} ({attr.get('tourism', 'attraction')})")
+        
+        # Helper to format weather string
+        weather_str = ""
+        if weather:
+            temp = weather.get('temperature', 'N/A')
+            wind = weather.get('windspeed', 'N/A')
+            # We don't have rain probability in current weather data, so we'll use wind/condition
+            weather_str = f"In {place_name} it's currently {temp}°C with wind speed of {wind} km/h."
         else:
-            output_lines.append("   No tourist attractions found nearby")
-        
-        output_lines.append("\n" + "=" * 60)
-        
-        return "\n".join(output_lines)
+            weather_str = f"In {place_name}, weather information is currently unavailable."
+
+        # Helper to format attractions list
+        attractions_str = ""
+        if attractions:
+            attractions_str = "\n".join([f"{attr['name']}" for attr in attractions])
+        else:
+            attractions_str = "No places found."
+
+        # Format based on intent
+        if intent == 'weather':
+            return weather_str
+            
+        elif intent == 'plan_trip':
+            return f"In {place_name} these are the places you can go, - - - - -\n{attractions_str}"
+            
+        elif intent == 'food':
+            return f"In {place_name} these are the places you can eat, - - - - -\n{attractions_str}"
+            
+        elif intent == 'accommodation':
+            return f"In {place_name} these are the places you can stay, - - - - -\n{attractions_str}"
+            
+        else: # combined or unknown
+            return f"{weather_str} And these are the places you can go: - - - - -\n{attractions_str}"
 

@@ -1,0 +1,60 @@
+Debugging places for: Bangalore
+DEBUG: Geocoded 'Bangalore' to Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, India
+Location: Bengaluru, Bangalore North, Bengaluru Urban, Karnataka, India
+Coords: 12.9767936, 77.590082
+
+--- Testing Tourism Category ---
+DEBUG: Overpass Query:
+[out:json][timeout:45];
+(
+
+              node["tourism"](around:10000,12.9767936,77.590082);
+              way["tourism"](around:10000,12.9767936,77.590082);
+              relation["tourism"](around:10000,12.9767936,77.590082);
+              
+              node["historic"](around:10000,12.9767936,77.590082);
+              way["historic"](around:10000,12.9767936,77.590082);
+              relation["historic"](around:10000,12.9767936,77.590082);
+              
+              node["leisure"~"park|garden|nature_reserve|water_park"](around:10000,12.9767936,77.590082);
+              way["leisure"~"park|garden|nature_reserve|water_park"](around:10000,12.9767936,77.590082);
+              
+              node["natural"~"peak|waterfall|cave_entrance|beach"](around:10000,12.9767936,77.590082);
+              way["natural"~"peak|waterfall|cave_entrance|beach"](around:10000,12.9767936,77.590082);
+            
+);
+out center;
+DEBUG: Searching for tourism around 12.9767936, 77.590082 with radius 10000m
+DEBUG: Found 2441 total elements
+DEBUG: Returning 10 named places
+Found 10 attractions
+- Rajarajeshwari Arch (attraction)
+- Chickpet Cross (attraction)
+- Lalbagh Glasshouse (attraction)
+- Mahatma Gandhi Statue (memorial)
+- Krishnarajapuram Hanging Bridge (attraction)
+- Jamsetji Tata Statue (memorial)
+- Shivaji Statue (artwork)
+- Sri M.S. Ramaiah tomb (memorial)
+- Queen Victoria (memorial)
+- Statue of Edward VII (memorial)
+
+--- Testing Food Category ---
+DEBUG: Overpass Query:
+[out:json][timeout:45];
+(
+
+              node["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](around:5000,12.9767936,77.590082);
+              way["amenity"~"restaurant|cafe|fast_food|bar|pub|food_court"](around:5000,12.9767936,77.590082);
+            
+);
+out center;
+DEBUG: Searching for food around 12.9767936, 77.590082 with radius 5000m
+DEBUG: Found 1523 total elements
+DEBUG: Returning 5 named places
+Found 5 food places
+- Sukh Sagar
+- Adyar Ananda Bhavan
+- Koshy's
+- Konārk
+- Old Madras Baking Company

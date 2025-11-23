@@ -11,22 +11,44 @@
 <body>
     <div class="container">
         <header>
+            <button class="profile-btn" onclick="openProfileModal()">
+                👤 Profile
+            </button>
             <h1>🌍 Tourism Planning Assistant</h1>
             <p class="subtitle">Plan your trip with AI-powered recommendations</p>
+
+            <!-- User Info Display (Hidden by default until loaded) -->
+            <div id="userInfoDisplay" class="user-info-display" style="display: none;">
+                <div class="user-avatar">👤</div>
+                <div class="user-name" id="displayUserName">User</div>
+                <div class="user-bio" id="displayUserBio">Travel Enthusiast</div>
+            </div>
         </header>
+
+        <!-- Profile Modal -->
+        <div id="profileModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="closeProfileModal()">&times;</span>
+                <h2 style="margin-bottom: 20px; color: #2d3748;">Edit Profile</h2>
+
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" id="userNameInput" class="form-input" placeholder="Your Name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Bio</label>
+                    <textarea id="userBioInput" class="form-input"
+                        placeholder="Tell us about your travel preferences..."></textarea>
+                </div>
+
+                <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+            </div>
+        </div>
 
         <div class="chat-container">
             <div class="input-section">
                 <label for="placeInput" class="input-label">Input:</label>
-
-                <!-- Search History -->
-                <div id="searchHistory" class="search-history"></div>
-
-                <!-- Popular Destinations -->
-                <div class="popular-section">
-                    <div class="popular-label">✨ Popular Destinations</div>
-                    <div id="popularDestinations"></div>
-                </div>
 
                 <input type="text" id="placeInput" placeholder="I'm going to go to Bangalore let's plan my trip."
                     autocomplete="off">

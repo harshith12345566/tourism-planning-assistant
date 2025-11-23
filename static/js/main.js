@@ -454,25 +454,38 @@ function displayResults(data, placeName, intent) {
 
     let output = '';
 
-    // Determine what to show based on user intent
-    const showWeather = intent.wantsWeather;
-    const showPlaces = intent.wantsPlaces;
+    // Use backend intent if available, otherwise fall back to frontend intent
+    const backendIntent = data.intent || 'combined';
     const cityName = data.place_info.name.split(',')[0];
 
-    // Case 1: Places only (Example 1)
-    if (showPlaces && !showWeather) {
-        output += `<div class="output-intro">In <strong>${cityName}</strong> these are the places you can go,</div>`;
-        output += formatAttractionsList(data.attractions);
-    }
-    // Case 2: Weather only (Example 2)
-    else if (showWeather && !showPlaces && data.weather) {
+    // Debug logging
+    console.log('Backend Intent:', backendIntent);
+    console.log('Data:', data);
+
+    // Case 1: Weather only
+    if (backendIntent === 'weather' && data.weather) {
         const weather = data.weather;
         const temp = weather.temperature;
         const rainChance = estimateRainChance(weather.weathercode);
         output += `<div class="output-intro">In <strong>${cityName}</strong> it's currently ${temp}°C with a chance of ${rainChance}% to rain.</div>`;
     }
-    // Case 3: Both weather and places (Example 3)
-    else if (showWeather && showPlaces) {
+    // Case 2: Plan trip only
+    else if (backendIntent === 'plan_trip') {
+        output += `<div class="output-intro">In <strong>${cityName}</strong> these are the places you can go,</div>`;
+        output += formatAttractionsList(data.attractions);
+    }
+    // Case 3: Food
+    else if (backendIntent === 'food') {
+        output += `<div class="output-intro">In <strong>${cityName}</strong> these are the places you can eat,</div>`;
+        output += formatAttractionsList(data.attractions);
+    }
+    // Case 4: Accommodation
+    else if (backendIntent === 'accommodation') {
+        output += `<div class="output-intro">In <strong>${cityName}</strong> these are the places you can stay,</div>`;
+        output += formatAttractionsList(data.attractions);
+    }
+    // Case 5: Combined (weather + places)
+    else if (backendIntent === 'combined') {
         if (data.weather) {
             const weather = data.weather;
             const temp = weather.temperature;
@@ -538,7 +551,17 @@ function formatAttractionsList(attractions) {
     let html = '<div class="output-places">';
 
     attractions.forEach((attraction) => {
-        html += `<div class="attraction-card">
+        html += `<div class="attraction-card">`;
+
+        // Show Attraction Image if available
+        if (attraction.photo) {
+            html += `
+            <div class="attraction-image-container">
+                <img src="${attraction.photo}" alt="${attraction.name}" class="attraction-image" onerror="this.style.display='none'">
+            </div>`;
+        }
+
+        html += `
             <div class="attraction-info">
                 <div class="attraction-name">${attraction.name || 'Unnamed Attraction'}</div>
                 <div class="attraction-meta">${attraction.tourism || 'Attraction'}</div>
