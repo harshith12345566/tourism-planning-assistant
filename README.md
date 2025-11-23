@@ -297,28 +297,6 @@ http://localhost:5000
 
 ---
 
-## 🌐 Deployment
-
-### Quick Deploy to Render (Free)
-
-1. Push to GitHub
-2. Go to [Render.com](https://render.com)
-3. Create new Web Service
-4. Connect GitHub repository
-5. Add `GEMINI_API_KEY` environment variable
-6. Deploy!
-
-**Full deployment guide**: See [DEPLOYMENT.md](DEPLOYMENT.md)
-
-**Supported Platforms**:
-- ✅ Render (Recommended)
-- ✅ Railway
-- ✅ Vercel
-- ✅ Heroku
-- ✅ PythonAnywhere
-
----
-
 ## 📁 Project Structure
 
 ```
